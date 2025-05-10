@@ -11,7 +11,7 @@ if uploaded_file:
     # Clean and normalize column names
     df.columns = df.columns.str.strip()
 
-    # Rename columns
+    # Rename columns for consistency
     df = df.rename(columns={
         'UTM campaign': 'utm_campaign',
         'Sessions': 'sessions',
@@ -21,34 +21,33 @@ if uploaded_file:
         'Average session duration': 'time_on_site'
     })
 
-    # Drop rows where UTM campaign is missing
+    # Drop rows without UTM campaign
     df = df.dropna(subset=['utm_campaign'])
     df['utm_campaign'] = df['utm_campaign'].astype(str).str.strip()
 
-    # Group and aggregate
+    # Aggregate by campaign
     grouped = df.groupby('utm_campaign').agg({
         'sessions': 'sum',
         'conversions': 'sum',
         'add_to_cart': 'sum',
         'reached_checkout': 'sum',
-        'time_on_site': 'mean'  # Average across grouped sessions
+        'time_on_site': 'mean'
     }).reset_index()
 
-    # Calculate conversion rates
+    # Calculate performance rates
     grouped['conversion_rate'] = (grouped['conversions'] / grouped['sessions']) * 100
     grouped['add_to_cart_rate'] = (grouped['add_to_cart'] / grouped['sessions']) * 100
     grouped['reached_checkout_rate'] = (grouped['reached_checkout'] / grouped['sessions']) * 100
 
-    # Round all rates and time_on_site
+    # Round for display
     grouped[['conversion_rate', 'add_to_cart_rate', 'reached_checkout_rate', 'time_on_site']] = (
         grouped[['conversion_rate', 'add_to_cart_rate', 'reached_checkout_rate', 'time_on_site']].round(2)
     )
 
-    # Show full performance table
     st.subheader("📊 Campaign Performance Summary")
     st.dataframe(grouped.sort_values(by='conversion_rate', ascending=False), use_container_width=True)
 
-    # Optional: Top 10 by each metric
+    # Leaderboards
     metric_labels = {
         'conversions': 'Conversions',
         'add_to_cart': 'Add to Carts',
@@ -63,3 +62,4 @@ if uploaded_file:
         top_10 = grouped[['utm_campaign', metric]].sort_values(by=metric, ascending=False).head(10)
         st.markdown(f"### 🔝 Top 10 Campaigns by {label}")
         st.dataframe(top_10, use_container_width=True)
+
