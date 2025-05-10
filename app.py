@@ -21,20 +21,20 @@ if uploaded_file:
         'Average session duration': 'time_on_site'
     })
 
-    # Drop rows without UTM campaign and clean text
+    # Drop rows without UTM campaign
     df = df.dropna(subset=['utm_campaign'])
     df['utm_campaign'] = df['utm_campaign'].astype(str).str.strip()
 
-    # Aggregate campaign totals
+    # Aggregate by campaign
     grouped = df.groupby('utm_campaign').agg({
         'sessions': 'sum',
         'conversions': 'sum',
         'add_to_cart': 'sum',
         'reached_checkout': 'sum',
-        'time_on_site': 'mean'  # average per session
+        'time_on_site': 'mean'  # average time per session
     }).reset_index()
 
-    # Correctly calculate campaign-level performance rates
+    # Calculate accurate performance rates
     grouped['conversion_rate'] = (grouped['conversions'] / grouped['sessions']) * 100
     grouped['add_to_cart_rate'] = (grouped['add_to_cart'] / grouped['sessions']) * 100
     grouped['reached_checkout_rate'] = (grouped['reached_checkout'] / grouped['sessions']) * 100
@@ -44,9 +44,11 @@ if uploaded_file:
         grouped[['conversion_rate', 'add_to_cart_rate', 'reached_checkout_rate', 'time_on_site']].round(2)
     )
 
-    # Show overall campaign performance
-    st.subheader("📊 Campaign Performance Summary")
-    st.dataframe(grouped.sort_values(by='conversion_rate', ascending=False), use_container_width=True)
+    # Optional: Filter campaigns with very low session counts (adjust threshold if needed)
+    grouped_filtered = grouped[grouped['sessions'] >= 50]
+
+    st.subheader("📊 Campaign Performance Summary (Min 50 Sessions)")
+    st.dataframe(grouped_filtered.sort_values(by='conversion_rate', ascending=False), use_container_width=True)
 
     # Leaderboards
     metric_labels = {
@@ -60,6 +62,6 @@ if uploaded_file:
     }
 
     for metric, label in metric_labels.items():
-        top_10 = grouped[['utm_campaign', metric]].sort_values(by=metric, ascending=False).head(10)
+        top_10 = grouped_filtered[['utm_campaign', 'sessions', metric]].sort_values(by=metric, ascending=False).head(10)
         st.markdown(f"### 🔝 Top 10 Campaigns by {label}")
         st.dataframe(top_10, use_container_width=True)
